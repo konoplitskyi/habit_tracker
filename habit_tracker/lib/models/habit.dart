@@ -7,4 +7,5 @@ class Habit {
   Id id = Isar.autoIncrement;
   late String name;
   List<DateTime> completedDays = [];
+  late int orderIndex;
 }

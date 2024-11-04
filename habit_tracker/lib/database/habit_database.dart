@@ -33,19 +33,39 @@ class HabitDatabase extends ChangeNotifier {
   final List<Habit> currentHabits = [];
 
   Future<void> addHabit(String habitName) async {
-    final newHabit = Habit()..name = habitName;
+    final newHabit = Habit()
+      ..name = habitName
+      ..orderIndex = await isar.habits.count();
     await isar.writeTxn(() => isar.habits.put(newHabit));
 
     readHabits();
   }
 
   Future<void> readHabits() async {
-    List<Habit> fetchedHabits = await isar.habits.where().findAll();
-
+    List<Habit> fetchedHabits =
+        await isar.habits.where().sortByOrderIndex().findAll();
     currentHabits.clear();
     currentHabits.addAll(fetchedHabits);
 
     notifyListeners();
+  }
+
+  Future<void> updateHabits(int oldIndex, int newIndex) async {
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+
+    final Habit movedHabit = currentHabits.removeAt(oldIndex);
+    currentHabits.insert(newIndex, movedHabit);
+
+    for (int i = 0; i < currentHabits.length; i++) {
+      currentHabits[i].orderIndex = i;
+    }
+
+    notifyListeners();
+    await isar.writeTxn(() async {
+      await isar.habits.putAll(currentHabits);
+    });
   }
 
   Future<void> updateHabitCompletion(int id, bool isCompleted) async {
@@ -95,5 +115,7 @@ class HabitDatabase extends ChangeNotifier {
     await isar.writeTxn(() async {
       await isar.habits.delete(id);
     });
+
+    readHabits();
   }
 }
